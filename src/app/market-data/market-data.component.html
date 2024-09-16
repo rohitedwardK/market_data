@@ -1,0 +1,217 @@
+<div class="container d-flex flex-column mx-auto market-mod">
+    <div class="market-data mb-3 p-1 d-flex flex-column">
+        <div class="flex-row d-flex mb-1 mt-2 align-items-center justify-content-between bg-light p-1 shadow-bg">
+            <h4 *ngIf="!officeMod">Nifty 50 Stocks: </h4>
+            
+            <div class="d-flex justify-content-between align-items-center" *ngIf="symbolName">
+                <form class="d-inline-flex">
+                    <div class="input-group align-items-center">
+                        <label for="symbol" class="pe-1">Enter:</label>
+                        <!-- <input type="text" #ticker class="form-control" id="ticker" placeholder="Symbol" style="max-width:160px"> -->
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                Select Frequency
+                            </button>
+                            <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                <a class="dropdown-item" href="#" data-value="hourly">Hourly</a>
+                                <a class="dropdown-item" href="#" data-value="daily">Daily</a>
+                            </div>
+                        </div>
+                        <input type="number" #dateDelta class="form-control" id="dateDelta" placeholder="Delta" style="max-width:80px">
+                        <button (click)="getStockData(symbolName, dateDelta.value)" class="btn btn-primary">Fetch Data</button>
+                    </div>
+                </form>  
+            </div>
+            <span class="text-primary live-btn" (click)="toggleApiCall()">
+                {{ apiCallActive ? 'OFF' : 'LIVE' }}
+            </span>
+            <div class="d-flex justify-content-between align-items-center text-end" *ngIf="headerTickerValues">
+                <div class="todayTickerData">
+                    <span>Opening Price: <strong>{{searchedStockData['opening_price'].toFixed()}}</strong></span>&nbsp;
+                    <span>Closing Price: <strong>{{headerTickerValues['Close'].toFixed()}}</strong></span>&nbsp;
+                    <span>High: <strong class="text-success">{{searchedStockData['high'].toFixed()}}</strong></span>&nbsp;
+                    <span>Low: <strong class="text-danger">{{searchedStockData['low'].toFixed()}}</strong></span>&nbsp;| &nbsp;
+                </div>
+                <div class="date">
+                    <b>As of {{headerTickerValues?.date}}</b>
+                </div>
+            </div>
+        </div>
+        <div *ngIf="nifty50Data?.marketSearchResult?.length > 0; else dataLoading">
+            <div class="content-wrapper">
+                <div class="chart-container">
+                    <div *ngIf="!currentData && chartName">
+                        Sorry we do not have any data for <strong>{{chartName}}</strong>!!
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <div class="md-auto px-1 py-2">
+                            <div class="plot-chart" *ngIf="!officeMod">
+                                <div class="label-text" *ngIf="this.latestStockData?.length">Last 1 Hour Data</div>
+                            </div> 
+                        </div>
+                        <div class="section-30 bg-dark text-light px-3 pt-1">
+                            <div>
+                                <h4>Top 5 CE with Lowest RSI</h4>
+                                <table class="table table-hover table-stripped">
+                                    <thead class="table-secondary">
+                                      <tr>
+                                        <th>Symbol</th>
+                                        <th>RSI</th>
+                                        <th>Price (INR)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr *ngFor="let stock of lowestRsiStocks">
+                                        <td class="text-primary link-text"><span (click)="getLastestData(stock.stock)">{{ stock.stock | removeNs }}</span></td>
+                                        <td>{{ stock.rsi | number:'1.2-2'}}</td>
+                                        <td>{{ stock.current_price | number:'1.2-2' }}</td>
+                                      </tr>
+                                    </tbody>
+                                </table>
+                              
+                                <h4>Top 5 PE with the Highest RSI</h4>
+                                <table class="table table-hover table-stripped">
+                                    <thead class="table-secondary">
+                                      <tr>
+                                        <th>Symbol</th>
+                                        <th>RSI</th>
+                                        <th>Price (INR)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr *ngFor="let stock of highestRsiStocks">
+                                        <td class="text-primary link-text"><span (click)="getLastestData(stock.stock)">{{ stock.stock | removeNs }}</span></td>
+                                        <td>{{ stock.rsi | number:'1.2-2'}}</td>
+                                        <td>{{ stock.current_price | number:'1.2-2' }}</td>
+                                      </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="section-30 bg-secondary bg-light px-1 py-2" *ngIf="searchedStockData">
+                            <div class="d-flex flex-row justify-content-between align-items-center">
+                                <div><small>Symbol name:</small><h4>{{(symbolName | removeNs) | uppercase}}</h4><small>Last 30 Days data</small></div>
+                                <!-- <h5 *ngIf="searchedStockData && (symbolName !== currentTicker)">{{searchedStockData.current_price | number:'1.2-2'}}</h5>
+                                <h5 class="pe-1 ps-1" *ngIf="currentSearchTicker">{{currentSearchTicker['Close'] | number:'1.2-2' || searchedStockData.current_price | number:'1.2-2' }}
+                                    <sup class="value-difference" [ngClass]="{'text-success': (currentSearchTicker['Close'] - currentSearchTicker['Open']) > 0, 'text-danger': (currentSearchTicker['Close'] - currentSearchTicker['Open']) < 0}">{{(currentSearchTicker['Close'] - currentSearchTicker['Open']) | number:'1.2-2'}}</sup></h5>
+                                 -->
+                                <h5 *ngIf="currentSearchTicker && (currentTicker === symbolName)" 
+                                  class="value-difference" 
+                                  [ngClass]="{'text-success up-arrow': (searchedStockData['closing_price'] - currentSearchTicker['Open']) > 0, 'text-danger down-arrow': (searchedStockData['closing_price'] - currentSearchTicker['Open']) < 0}">
+                                {{(currentSearchTicker['Close'] - currentSearchTicker['Open']) | number:'1.2-2'}}</h5>
+                            </div>
+                            <div *ngIf="searchedStockData" class="text-end">
+                                <ul class="list-group">
+                                    <li class="list-group-item"><span>Current Price: <strong>{{ (latestNifty50Data ? latestNifty50Data[currentTicker] : getCurrentPrice()) | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>Highest Price <small>(Last 5 days)</small>: <strong class="text-success">{{searchedStockData.high | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>Lowest Price <small>(Last 5 Days)</small>: <strong class="text-danger">{{searchedStockData.low | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>Pivot Value <small>(Last 30 Days)</small>: <strong class="text-danger">{{searchedStockData.pivot_point | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>21 DMA Price <small>(Last 30 Days)</small>: <strong class="text-success">{{searchedStockData.dma_21 | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>Support Price <small>(Last 30 Days)</small>: <strong class="text-danger">{{searchedStockData.support_1 | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>Resistance Price <small>(Last 30 Days)</small>: <strong>{{searchedStockData.resistance_1 | number:'1.2-2'}}</strong></span></li>
+                                    <li class="list-group-item"><span>Prediction: <strong [ngClass]="setTextColor(searchedStockData.prediction)">{{searchedStockData.prediction}}</strong></span></li>
+                                  </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="table table-hover table-stripped" *ngIf="!showShortTerm">
+                    <thead class="table-secondary">
+                      <tr>
+                        <th>Symbol</th>
+                        <!-- <th>Opening Price (INR)</th> -->
+                        
+                        <th>Current Price (INR)</th>
+                        <th>Closing Price (Yes)</th>
+                        <th>Total Movement (Yes)</th>
+                        <th>30 day Low</th>
+                        <th>30 Day High</th>
+                        <th>21 DMA (INR)</th>
+                        <th>Pivot Point (INR)</th>
+                        <th>Resistance (INR)</th>
+                        <th>Support (INR)</th>
+                        <th>Sell Strike Price</th>
+                        <th>Buy Strike Price</th>
+                        <th>Trend (Short Term)</th>
+                        <!-- <th>Trend</th> -->
+                        <th (click)="sortData('prediction')"
+                        [class.sorted-asc]="sortColumn === 'prediction' && sortDirection === 'asc'"
+                        [class.sorted-desc]="sortColumn === 'prediction' && sortDirection === 'desc'">Prediction (Long Term)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let stock of nifty50Data?.marketSearchResult">
+                        <td class="text-primary link-text"><span (click)="getLastestData(stock.symbol)">{{ stock.symbol | removeNs }}</span></td>
+                        <!-- <td>{{ stock.opening_price | number:'1.2-2' }}</td> -->
+                        
+                        <td class="current-price-td" [ngClass]="{'updated' : priceUpdated}">{{ (latestNifty50Data ? latestNifty50Data[stock.symbol] : stock.current_price) | number:'1.2-2' }}</td>
+                        <td>{{ stock.closing_price | number:'1.2-2' }}</td>
+                        <td  [ngClass]="{'text-success up-arrow': stock.total_movement > 0, 'text-danger down-arrow': stock.total_movement < 0}">{{ stock.total_movement | number:'1.2-2' }}</td>
+                        <td>{{ stock.low | number:'1.2-2' }}</td>
+                        <td>{{ stock.high | number:'1.2-2' }}</td>
+                        <td>{{ stock.dma_21 | number:'1.2-2' }}</td>
+                        <td>{{ stock.pivot_point | number:'1.2-2' }}</td>
+                        <td>{{ stock.resistance_1 | number:'1.2-2' }}</td>
+                        <td>{{ stock.support_1 | number:'1.2-2' }}</td>
+                        <td>{{ stock.sell_strike_price | number:'1.2-2'}}</td>
+                        <td>{{ stock.buy_strike_price | number:'1.2-2'}}</td>
+                        <td [ngClass]="stock.price_trends !== 'DOWN' ? 'text-success up-arrow' : 'text-danger down-arrow'">{{ stock.price_trends}}</td>
+                        <!-- <td>{{ stock.prediction === 'BUY' ? 'Up Trend' : 'Down Trend' }}</td> -->
+                        <td [ngClass]="setBgColor(stock.prediction)">{{ stock.prediction }}</td>
+                      </tr>
+                    </tbody>
+                </table>
+
+                <!-- short term data table -->
+                <table class="table table-hover table-stripped" *ngIf="showShortTerm">
+                    <thead class="table-secondary">
+                      <tr>
+                        <th>Symbol</th>
+                        <th>Opening Price (INR)</th>
+                        <th>Current Price (INR)</th>
+                        <th>Total Movement (INR)</th>
+                        <th>5 DMA</th>
+                        <th>21 DMA</th>
+                        <th>Weekly Pivot</th>
+                        <th>Weekly Res 1</th>
+                        <th>Weekly Supp 1</th>
+                        <th>Monthly Pivot</th>
+                        <th>Monthly Res 1</th>
+                        <th>Monthly Supp 1</th>
+                        <th>Trend 5 DMA</th>
+                        <th>Trend Weekly</th>
+                        <th>Trend Monthly</th>
+                        <th>Signal 5 DMA</th>
+                        <th>Signal 21 DMA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let shortTerm of nifty50Data?.marketSearchResult">
+                        <td class="text-primary link-text"><span (click)="getLastestData(shortTerm.symbol)">{{ shortTerm.symbol | removeNs }}</span></td>
+                        <td>{{ shortTerm.last_open | number:'1.2-2' }}</td>
+                        <td class="current-price-td" [ngClass]="{'updated' : priceUpdated}">{{ (latestNifty50Data ? latestNifty50Data[shortTerm.symbol] : shortTerm.last_close) | number:'1.2-2' }}</td>
+                        <td  [ngClass]="{'text-success up-arrow': shortTerm.movement > 0, 'text-danger down-arrow': shortTerm.movement < 0}">{{ shortTerm.movement | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.dma5 | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.dma21 | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.weekly_pivot | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.weekly_res1 | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.weekly_supp1 | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.monthly_pivot | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.monthly_res1 | number:'1.2-2' }}</td>
+                        <td>{{ shortTerm.monthly_supp1 | number:'1.2-2' }}</td>
+                        <td [ngClass]="setBgColor(shortTerm.dma5_trend)">{{ shortTerm.dma5_trend }}</td>
+                        <td [ngClass]="setBgColor(shortTerm.trend_weekly)">{{ shortTerm.trend_weekly}}</td>
+                        <td [ngClass]="setBgColor(shortTerm.trend_monthly)">{{ shortTerm.trend_monthly }}</td>
+                        <td [ngClass]="setBgColor(shortTerm.weekly_signal)">{{ shortTerm.weekly_signal }}</td>
+                        <td [ngClass]="setBgColor(shortTerm.monthly_signal)">{{ shortTerm.monthly_signal }}</td>
+                      </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <ng-template #dataLoading><div *ngIf="!officeMod" class="loader d-flex flex-column align-items-center justify-content-center">Loading Nifty 50 Stocks Data...</div></ng-template>
+    </div>
+</div>
+<div  #historicalChart></div>
